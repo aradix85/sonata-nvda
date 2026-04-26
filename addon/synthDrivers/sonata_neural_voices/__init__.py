@@ -131,7 +131,6 @@ def create_wave_player(sample_rate):
         channels=1,
         samplesPerSec=sample_rate,
         bitsPerSample=16,
-        outputDevice=config.conf["audio"]["outputDevice"],
     )
 
 
@@ -190,7 +189,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         super().__init__()
         try:
             _GRPC_IS_INIT.result()
-        except:
+        except Exception:
             log.exception(
                 f"Failed to initialize Sonata services. Synthesizer will not be available.",
                 exc_info=True,
@@ -242,68 +241,11 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         for player in self._players.values():
             player.close()
         self._players.clear()
+        aio.terminate()
 
     def speak(self, speechSequence):
         with self.tts.create_synthesis_context():
             self._fast_prepare_and_run_speech_task(speechSequence)
-
-    def _prepare_and_run_speech_task(self, speechSequence):
-        self.cancel()
-        speech_seq = []
-        text_list = []
-        index_command_list = []
-        default_lang = self.tts.language
-        for item in speechSequence:
-            item_type = type(item)
-            if item_type is IndexCommand:
-                index_command_list.append(item.index)
-                continue
-            elif item_type is str:
-                text_list.append(item)
-                continue
-            if any(text_list):
-                speech_seq.append(
-                    SpeechTask(
-                        self.tts.create_speech_provider("".join(text_list)),
-                        self._player,
-                    )
-                )
-                text_list.clear()
-            if item_type is BreakCommand:
-                speech_seq.append(
-                    BreakTask(
-                        self.tts.create_break_provider(item.time),
-                        self._player,
-                    )
-                )
-            elif item_type is LangChangeCommand:
-                if item.isDefault:
-                    self.tts.language = default_lang
-                else:
-                    self.tts.language = item.lang
-            elif item_type is RateCommand:
-                self.tts.rate = item.newValue
-            elif item_type is VolumeCommand:
-                self.tts.volume = item.newValue
-            elif item_type is PitchCommand:
-                self.tts.pitch = item.newValue
-        if any(text_list):
-            speech_seq.append(
-                SpeechTask(
-                    self.tts.create_speech_provider("".join(text_list)),
-                    self._player,
-                )
-            )
-        if any(index_command_list):
-            speech_seq.append(IndexReachedTask(self._on_index_reached, index_command_list))
-        speech_seq.append(
-            DoneSpeakingTask(
-                self._player, self._on_index_reached
-            )
-        )
-        self._current_task = process_speech(
-            speech_seq
-        ).result()
 
     def _fast_prepare_and_run_speech_task(self, speechSequence):
         self.cancel()
@@ -376,22 +318,6 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             synthIndexReached.notify(synth=self, index=index)
         else:
             synthDoneSpeaking.notify(synth=self)
-
-    def combine_adjacent_strings(self, lst):
-        """Taken from IBMTTS add-on."""
-        result = []
-        current_string = ""
-        for item in lst:
-            if isinstance(item, str):
-                current_string += item
-            else:
-                if current_string:
-                    result.append(current_string)
-                    current_string = ""
-                result.append(item)
-        if current_string:
-            result.append(current_string)
-        return result
 
     def _get_or_create_player(self, sample_rate):
         if sample_rate not in self._players:
@@ -532,7 +458,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         # Update gui if shown
         try:
             update_displaied_params_on_voice_change(self)
-        except:
+        except Exception:
             log.exception("Failed to update Speech GUI", exc_info=True)
 
     def _get_language(self):
