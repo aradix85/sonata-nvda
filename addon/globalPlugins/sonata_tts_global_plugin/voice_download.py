@@ -12,6 +12,7 @@ import shutil
 import tarfile
 import tempfile
 import typing
+import urllib.parse
 from dataclasses import dataclass
 from enum import Enum, auto
 from fnmatch import fnmatch
@@ -201,21 +202,21 @@ class PiperVoiceDownloader:
                 _("Installing voice")
             )
             hashes = {
-                file.md5hash: md5hash
+                file.name: (file.md5hash, md5hash)
                 for (file, __, md5hash) in result
             }
-            if not all(k == v for (k, v) in hashes.items()):
+            if not all(expected == actual for expected, actual in hashes.values()):
                 has_error = True
                 log.error("File hashes do not match")
             else:
                 voice_dir = Path(SONATA_VOICES_DIR).joinpath(self.voice.key)
                 voice_dir.mkdir(parents=True, exist_ok=True)
-                for file, src,  __ in result:
+                for file, src, __ in result:
                     dst = os.path.join(voice_dir, file.name)
                     try:
                         shutil.copy(src, dst)
                     except IOError:
-                        log.exception("Failed to copy file: {file}", exc_info=True)
+                        log.exception(f"Failed to copy file: {file}", exc_info=True)
                         has_error = True
 
         self.progress_dialog.Hide()
@@ -280,25 +281,46 @@ class PiperVoiceDownloader:
 
     @classmethod
     def _do_download_file(cls, file, download_dir, progress_callback):
-        target_file = os.path.join(download_dir, file.name)
+        target_file = os.path.join(download_dir, file.file_path.replace('/', os.sep))
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+
         hasher = md5()
         total_size = file.size_in_bytes
         downloaded_til_now = 0
-        with request.yield_response('GET', file.download_url) as response:
-            if response.status == 302:
-                file.download_url = response.getheader("Location")
-                return cls._do_download_file(file, download_dir, progress_callback)
-            file_buffer = open(target_file, "wb")
-            while True:
-                chunk = response.read(4096)
-                if not chunk:
-                    break
-                file_buffer.write(chunk)
-                hasher.update(chunk)
-                downloaded_til_now += len(chunk)
-                progress = math.floor((downloaded_til_now / total_size) * 100)
-                progress_callback(progress)
-            file_buffer.close()
+
+        url = file.download_url
+        redirect_limit = 5
+
+        for _redirect in range(redirect_limit):
+            with request.yield_response('GET', url) as response:
+                if response.status in (301, 302, 303, 307, 308):
+                    location = response.getheader("Location")
+                    if not location:
+                        raise ValueError("Redirect without Location header.")
+                    url = urllib.parse.urljoin(url, location)
+                    continue
+
+                if response.status != 200:
+                    raise RuntimeError(f"Download failed for {file.file_path} (status {response.status})")
+
+                content_type = response.getheader("Content-Type", "").lower()
+                if "text/html" in content_type or "xml" in content_type:
+                    raise RuntimeError(f"Wrong content-type while downloading {file.file_path}: {content_type}")
+
+                with open(target_file, "wb") as file_buffer:
+                    while True:
+                        chunk = response.read(4096)
+                        if not chunk:
+                            break
+                        file_buffer.write(chunk)
+                        hasher.update(chunk)
+                        downloaded_til_now += len(chunk)
+                        if total_size > 0:
+                            progress = math.floor((downloaded_til_now / total_size) * 100)
+                            progress_callback(progress)
+                break
+        else:
+            raise RuntimeError(f"Too many redirects while downloading {file.file_path}")
 
         return (file, target_file, hasher.hexdigest())
 
@@ -402,22 +424,41 @@ class PiperRTVoiceDownloader:
     @classmethod
     def _do_download_archive(cls, download_url, voice_name, download_dir, progress_callback):
         target_file = os.path.join(download_dir, voice_name)
-        with request.yield_response('GET', download_url) as response:
-            if response.status == 302:
-                download_url = response.getheader("Location")
-                return cls._do_download_archive(download_url, voice_name, download_dir, progress_callback)
-            total_size = int(response.getheader("Content-Length"))
-            downloaded_til_now = 0
-            file_buffer = open(target_file, "wb")
-            while True:
-                chunk = response.read(4096)
-                if not chunk:
-                    break
-                file_buffer.write(chunk)
-                downloaded_til_now += len(chunk)
-                progress = math.floor((downloaded_til_now / total_size) * 100)
-                progress_callback(progress)
-            file_buffer.close()
+        url = download_url
+        redirect_limit = 5
+
+        for _redirect in range(redirect_limit):
+            with request.yield_response('GET', url) as response:
+                if response.status in (301, 302, 303, 307, 308):
+                    location = response.getheader("Location")
+                    if not location:
+                        raise ValueError("Redirect without Location header.")
+                    url = urllib.parse.urljoin(url, location)
+                    continue
+
+                if response.status != 200:
+                    raise RuntimeError(f"Download failed for {voice_name} (status {response.status})")
+
+                content_type = response.getheader("Content-Type", "").lower()
+                if "text/html" in content_type or "xml" in content_type:
+                    raise RuntimeError(f"Wrong content-type while downloading {voice_name}: {content_type}")
+
+                total_size = int(response.getheader("Content-Length", 0))
+                downloaded_til_now = 0
+                with open(target_file, "wb") as file_buffer:
+                    while True:
+                        chunk = response.read(4096)
+                        if not chunk:
+                            break
+                        file_buffer.write(chunk)
+                        downloaded_til_now += len(chunk)
+                        if total_size > 0:
+                            progress = math.floor((downloaded_til_now / total_size) * 100)
+                            progress_callback(progress)
+                break
+        else:
+            raise RuntimeError(f"Too many redirects while downloading {voice_name}")
+
         return target_file
 
     @staticmethod
