@@ -40,8 +40,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.__voice_manager_shown = False
         self._voice_checker = lambda: wx.CallLater(3000, self._perform_voice_check)
         core.postNvdaStartup.register(self._voice_checker)
-        self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Insert(
-            4,
+        self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
             wx.ID_ANY,
             # Translators: label of a menu item
             _("Sonata &voice manager..."),
