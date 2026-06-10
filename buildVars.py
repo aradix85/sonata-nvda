@@ -32,7 +32,7 @@ addon_info = AddonInfo(
 		"Fixes voice list URL handling, voice install regex for names containing digits, voice list refresh after a successful download, install-from-local-file UX and error messages, and adds a Visual C++ Redistributable pre-flight check."
 	),
 	# Author(s)
-	addon_author="Musharraf Omer <ibnomer2011@hotmail.com>",
+	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",
 	# URL for the add-on documentation support
 	addon_url="https://github.com/austek/sonata-nvda",
 	# URL for the add-on repository where the source code can be found
