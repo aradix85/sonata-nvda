@@ -3,8 +3,8 @@
 # (e.g. v3.2-beta.5 — note that addon_version in buildVars.py stays strict
 # semver while -beta.N lives only in the tag; see project memory), and publish.
 
-name-template: '$RESOLVED_VERSION'
-tag-template: '$RESOLVED_VERSION'
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
 template: |
   $CHANGES
 
