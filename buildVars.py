@@ -29,9 +29,9 @@ addon_info = {
 	# Author(s)
 	"addon_author": "Musharraf Omer <ibnomer2011@hotmail.com>",
 	# URL for the add-on documentation support
-	"addon_url": None,
+	"addon_url": "https://github.com/austek/sonata-nvda",
 	# URL for the add-on repository where the source code can be found
-	"addon_sourceURL": "https://github.com/mush42/sonata-nvda",
+	"addon_sourceURL": "https://github.com/austek/sonata-nvda",
 	# Documentation file name
 	"addon_docFileName": "readme.html",
 	# Minimum NVDA version supported (e.g. "2018.3.0", minor version is optional)
