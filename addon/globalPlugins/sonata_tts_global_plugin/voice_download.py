@@ -44,7 +44,7 @@ RT_VOICE_DOWNLOAD_URL_PREFIX = "https://huggingface.co/datasets/mush42/piper-rt/
 
 VOICE_INFO_REGEX = re.compile(
     r"(?P<language>[a-z]+(_|-)?([a-z]+)?)(-|_)"
-    r"(?P<name>[a-z|_]+(\+RT)?)(-|_)"
+    r"(?P<name>[a-z0-9_]+(\+RT)?)(-|_)"
     r"(?P<quality>(high|medium|low|x-low|x_low))",
     re.I
 )
