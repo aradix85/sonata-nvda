@@ -477,6 +477,52 @@ class PiperRTVoiceDownloader:
             done_callback(result)
 
 
+def _voice_key_from_filename(stem):
+    """Derive a voice_key from a filename stem like 'en_US-lessac-medium'.
+
+    Returns the voice_key or None if the stem doesn't match the expected
+    <language>-<name>-<quality> form.
+    """
+    m = VOICE_INFO_REGEX.match(stem)
+    if m is None:
+        return None
+    info = m.groupdict()
+    return "-".join([
+        normalizeLanguage(info["language"]),
+        info["name"].replace("-", "_"),
+        info["quality"].replace("-", "_"),
+    ])
+
+
+def _voice_key_from_config(config):
+    """Derive a voice_key from a Piper voice config dict.
+
+    Used as a fallback when the filename doesn't follow the
+    <language>-<name>-<quality> convention. Modern Piper configs carry
+    `language.code`, `dataset`, and `audio.quality` — enough to construct
+    a unique key without relying on the filename.
+
+    Raises ValueError if the config is missing any required field.
+    """
+    try:
+        language = config["language"]["code"]
+        dataset = config["dataset"]
+        quality = config["audio"]["quality"]
+    except (KeyError, TypeError):
+        raise ValueError(
+            "Voice config is missing required fields (language.code, dataset, "
+            "audio.quality). The archive filename also didn't follow the "
+            "<language>-<name>-<quality> convention. Either rename the .onnx "
+            "file to follow that convention, or ensure the bundled config "
+            "JSON carries those fields."
+        )
+    return "-".join([
+        normalizeLanguage(language),
+        str(dataset).replace("-", "_"),
+        str(quality).replace("-", "_"),
+    ])
+
+
 def install_voice_from_tar_archive(tar_path, voices_dir):
     tar = tarfile.open(tar_path)
     filenames = {f.name: f for f in tar.getmembers()}
@@ -491,17 +537,12 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
     if not (onnx_files and config_files):
         raise FileNotFoundError("Required files not found in archive")
     if len(onnx_files) == 1:
-        voice_info = VOICE_INFO_REGEX.match(Path(onnx_files[0]).stem)
+        voice_key = _voice_key_from_filename(Path(onnx_files[0]).stem)
     else:
-        voice_info = VOICE_INFO_REGEX.match(Path(tar_path).stem[:-4])
-    if voice_info is None:
-        raise FileNotFoundError("Required files not found in archive")
-    info = voice_info.groupdict()
-    voice_key = "-".join([
-        normalizeLanguage(info["language"]),
-        info["name"].replace("-", "_"),
-        info["quality"].replace("-", "_"),
-    ])
+        voice_key = _voice_key_from_filename(Path(tar_path).stem[:-4])
+    if voice_key is None:
+        config = json.loads(tar.extractfile(filenames[config_files[0]]).read().decode("utf-8"))
+        voice_key = _voice_key_from_config(config)
     voice_folder_name = Path(voices_dir).joinpath(voice_key)
     voice_folder_name.mkdir(parents=True, exist_ok=True)
     voice_folder_name = os.fspath(voice_folder_name)
