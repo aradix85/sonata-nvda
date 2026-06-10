@@ -1,0 +1,42 @@
+# Release Drafter config. Maintains a draft release on GitHub that auto-updates
+# as PRs merge into main. At release time, open the draft, set the actual tag
+# (e.g. v3.2-beta.5 — note that addon_version in buildVars.py stays strict
+# semver while -beta.N lives only in the tag; see project memory), and publish.
+
+name-template: '$RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+template: |
+  $CHANGES
+
+categories:
+  - title: '🐛 Fixes'
+    labels:
+      - bug
+  - title: '✨ Features'
+    labels:
+      - enhancement
+  - title: '📚 Documentation'
+    labels:
+      - documentation
+  - title: '🧹 Maintenance'
+    labels:
+      - chore
+      - dependencies
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+# We tag manually, so don't try to auto-bump versions based on labels.
+# Leave $RESOLVED_VERSION as a placeholder the maintainer overrides at
+# release time.
+version-resolver:
+  default: patch
+
+# Exclude PRs by label — uncategorized noise (e.g. nvda-2026 historical work)
+# shouldn't pollute the release notes.
+exclude-labels:
+  - skip-changelog
+
+# If a PR has no recognized category label, surface it in a "Other Changes"
+# section so it isn't silently dropped.
+include-labels: []
