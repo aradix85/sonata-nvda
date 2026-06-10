@@ -1,0 +1,86 @@
+name: Bug report
+description: Something in the add-on isn't behaving the way it should.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The fields below help me reproduce and diagnose the problem quickly — please fill in as much as you can.
+
+  - type: input
+    id: addon-version
+    attributes:
+      label: Sonata Neural Voices version
+      description: From the add-on store, or the version number embedded in the file you installed.
+      placeholder: e.g. 3.2.0 / v3.2-beta.4
+    validations:
+      required: true
+
+  - type: input
+    id: nvda-version
+    attributes:
+      label: NVDA version
+      description: NVDA menu → Help → About NVDA.
+      placeholder: e.g. 2026.1
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: Settings → System → About, or `winver`.
+      placeholder: e.g. Windows 11 24H2 (x64)
+    validations:
+      required: true
+
+  - type: input
+    id: voice
+    attributes:
+      label: Voice / variant tested
+      description: Which Sonata voice was active when the bug happened. Skip if the bug isn't tied to a specific voice.
+      placeholder: e.g. en_US-lessac-medium (standard) / fr_FR-mls_1840-low (fast)
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, step by step? The more specific, the faster I can reproduce.
+      placeholder: |
+        1. Open voice manager
+        2. Click Download on a voice
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What you thought would happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What actually happened. Include any error dialog text verbatim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: nvda-log
+    attributes:
+      label: NVDA log slice
+      description: |
+        NVDA menu → Tools → View log → copy the relevant lines (the few lines around the error).
+        For best signal: set NVDA log level to "debug" (Preferences → General → Logging level), reproduce, then grab the log.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Workarounds you tried, related issues, screenshots, voice config file contents, etc.
