@@ -2,6 +2,7 @@
 
 import asyncio
 import atexit
+import ctypes
 import os
 import subprocess
 import time
@@ -9,6 +10,53 @@ from pathlib import Path
 
 import globalVars
 from logHandler import log
+
+VC_REDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+
+
+def _vcruntime_missing():
+    """Return True if vcruntime140_1.dll cannot be loaded.
+
+    sonata-grpc.exe is built with MSVC and needs the Visual C++ 2015-2022
+    Redistributable (x64). On fresh Windows installs without it, Popen
+    succeeds but the child process exits immediately with a missing-DLL
+    dialog the user never sees from inside NVDA; the addon then logs the
+    misleading 'Connection refused' from the failing gRPC channel.
+
+    Use ctypes.WinDLL to ask Windows directly — it respects the standard
+    DLL search path, so this is more reliable than checking a fixed
+    System32 location.
+    """
+    try:
+        ctypes.WinDLL("vcruntime140_1.dll")
+        return False
+    except (OSError, AttributeError):
+        return True
+
+
+def _show_vcruntime_warning():
+    """Defer a user-facing wx messageBox about the missing VC++ redistributable.
+
+    Imports of wx and gui are local so this module stays importable from
+    contexts (tests, headless tooling) where the NVDA GUI isn't available.
+    """
+    try:
+        import wx
+        import gui
+        wx.CallAfter(
+            gui.messageBox,
+            (
+                "Sonata Neural Voices could not start because the "
+                "Microsoft Visual C++ 2015-2022 Redistributable (x64) "
+                f"is not installed.\n\nDownload and install it from:\n{VC_REDIST_URL}\n\n"
+                "Then restart NVDA."
+            ),
+            "Sonata: missing dependency",
+            style=wx.ICON_ERROR,
+            parent=gui.mainFrame,
+        )
+    except Exception:
+        log.exception("Failed to show VC++ redistributable warning dialog", exc_info=True)
 
 from ..const import SONATA_VOICES_BASE_DIR
 from ..helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
@@ -33,6 +81,14 @@ def start_grpc_server():
         SONATA_GRPC_SERVER_PORT = globalVars.SONATA_GRPC_SERVER_PORT
         GRPC_SERVER_PROCESS = globalVars.GRPC_SERVER_PROCESS
         return True
+    if _vcruntime_missing():
+        log.error(
+            "Sonata GRPC server cannot start: vcruntime140_1.dll not found. "
+            "The Microsoft Visual C++ 2015-2022 Redistributable (x64) is required. "
+            f"Download and install it from {VC_REDIST_URL} then restart NVDA."
+        )
+        _show_vcruntime_warning()
+        return False
     SONATA_GRPC_SERVER_PORT = find_free_port()
     grpc_server_exe = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
     nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
