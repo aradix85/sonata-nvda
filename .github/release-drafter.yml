@@ -1,7 +1,9 @@
 # Release Drafter config. Maintains a draft release on GitHub that auto-updates
-# as PRs merge into main. At release time, open the draft, set the actual tag
-# (e.g. v3.2-beta.5 — note that addon_version in buildVars.py stays strict
-# semver while -beta.N lives only in the tag; see project memory), and publish.
+# as PRs merge into main. At release time, open the draft, confirm the
+# auto-resolved tag (e.g. v3.2.0-beta.5 for a beta, v3.2.0 for a stable cut),
+# and publish. addon_version in buildVars.py stays strict 3-part semver while
+# the -beta.N pre-release tag lives only in the git tag — see CONTRIBUTING.md
+# and the project_release_workflow memory.
 
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
