@@ -26,7 +26,11 @@ addon_info = AddonInfo(
 	addon_version="3.2.0",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
-	addon_changelog=None,
+	addon_changelog=_(
+		"First stable release of the maintenance fork. "
+		"Adds NVDA 2026.1 compatibility (Python 3.13, 64-bit) by rebuilding the bundled gRPC, miniaudio, and cffi binaries. "
+		"Fixes voice list URL handling, voice install regex for names containing digits, voice list refresh after a successful download, install-from-local-file UX and error messages, and adds a Visual C++ Redistributable pre-flight check."
+	),
 	# Author(s)
 	addon_author="Musharraf Omer <ibnomer2011@hotmail.com>",
 	# URL for the add-on documentation support
@@ -42,7 +46,7 @@ addon_info = AddonInfo(
 	# Add-on update channel (default is None, denoting stable releases,
 	# and for development releases, use "dev".)
 	# Do not change unless you know what you are doing!
-	addon_updateChannel="beta",
+	addon_updateChannel=None,
 	# Add-on license such as GPL 2
 	addon_license="GPL 2",
 	# URL for the license document the ad-on is licensed under
