@@ -253,7 +253,8 @@ class OnlineSonataVoicesPanel(SizedPanel):
         wx.StaticText(preview_box, -1, _("Speaker"))
         self.speaker_choice = wx.Choice(preview_box, -1, choices=[])
         # Translators: label of a button
-        preview_btn = wx.Button(preview_box, -1, _("&Preview"))
+        self.preview_btn = wx.Button(preview_box, -1, _("&Preview"))
+        self._preview_active = False
         dl_buttons_panel = SizedPanel(self.buttons_panel, -1)
         dl_buttons_panel.SetSizerType("horizontal")
         # Translators: label of a button to download the standard variant of the voice
@@ -265,7 +266,7 @@ class OnlineSonataVoicesPanel(SizedPanel):
         self.Bind(wx.EVT_CHOICE, self.on_language_selection_change, self.language_choice)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_voice_selected, self.voices_list)
         self.Bind(wx.EVT_CHOICE, self.on_speaker_selection_changed, self.speaker_choice)
-        self.Bind(wx.EVT_BUTTON, self.on_preview, preview_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_preview, self.preview_btn)
         self.Bind(wx.EVT_BUTTON, self.on_download, self.download_std_btn)
         self.Bind(wx.EVT_BUTTON, self.on_download_rt, self.download_rt_btn)
         self.Bind(wx.EVT_BUTTON, lambda e: self.populate_list(force_online=True), refresh_list_btn)
@@ -336,6 +337,11 @@ class OnlineSonataVoicesPanel(SizedPanel):
         pass
 
     def on_preview(self, event):
+        # While a preview is playing, the same button acts as Stop. This keeps
+        # the voice manager interactive — no modal dialog blocking the UI.
+        if self._preview_active:
+            winsound.PlaySound(None, winsound.SND_PURGE)
+            return
         selected_voice = self.voices_list.get_selected()
         if selected_voice is None:
             return
@@ -343,14 +349,31 @@ class OnlineSonataVoicesPanel(SizedPanel):
         if selected_voice.num_speakers > 1:
             speaker_idx = self.speaker_choice.GetSelection()
         mp3url = selected_voice.get_preview_url(speaker_idx=speaker_idx)
-        AsyncSnakDialog(
-            # Translators: message in a dialog
-            message=_("Playing preview..."),
-            executor=aio.THREADED_EXECUTOR,
-            func=functools.partial(play_remote_mp3, mp3url),
-            done_callback=lambda future: True,
-            parent=self.GetTopLevelParent()
+        self._preview_active = True
+        # Translators: label of the preview button while audio is playing
+        self.preview_btn.SetLabel(_("&Stop preview"))
+        future = aio.THREADED_EXECUTOR.submit(play_remote_mp3, mp3url)
+        future.add_done_callback(
+            lambda f: wx.CallAfter(self._on_preview_done, f)
         )
+
+    def _on_preview_done(self, future):
+        self._preview_active = False
+        # Translators: label of a button
+        self.preview_btn.SetLabel(_("&Preview"))
+        exc = future.exception()
+        if exc is not None:
+            log.exception(
+                "Voice preview failed", exc_info=(type(exc), exc, exc.__traceback__)
+            )
+            gui.messageBox(
+                # Translators: error shown when voice preview fails to play
+                _("Could not play voice preview.\nCheck your connection and try again."),
+                # Translators: title of an error message box
+                _("Preview failed"),
+                style=wx.ICON_ERROR,
+                parent=gui.mainFrame,
+            )
 
     def on_download(self, event):
 
