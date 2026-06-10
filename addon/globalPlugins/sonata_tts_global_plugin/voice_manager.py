@@ -182,7 +182,12 @@ class InstalledSonataVoicesPanel(SizedPanel):
             # Translators: title for a dialog for opening a file
             message=_("Choose voice archive file "),
             defaultDir=wx.GetUserHome(),
-            wildcard="Tar archives *.tar.gz | *.tar.gz",
+            wildcard=(
+                # Translators: file dialog filter for tar archives
+                _("Tar archives (*.tar.gz, *.tgz)") + "|*.tar.gz;*.tgz|"
+                # Translators: file dialog filter for all files
+                + _("All files") + "|*.*"
+            ),
             style=wx.FD_OPEN,
         )
         gui.runScriptModalDialog(
@@ -200,15 +205,17 @@ class InstalledSonataVoicesPanel(SizedPanel):
             voice_key = voice_download.install_voice_from_tar_archive(
                 filepath, SONATA_VOICES_DIR
             )
-        except:
+        except Exception as exc:
             log.error("Failed to install voice from archive", exc_info=True)
             gui.messageBox(
                 # Translators: message telling the user that installing the voice has failed
                 _(
-                    "Failed to install voice from archive. See NVDA's log for more details."
-                ),
+                    "Failed to install voice from archive.\n\n{detail}\n\n"
+                    "See NVDA's log for more details."
+                ).format(detail=str(exc) or type(exc).__name__),
                 _("Voice installation failed"),
                 style=wx.ICON_ERROR,
+                parent=gui.mainFrame,
             )
         else:
             gui.messageBox(
