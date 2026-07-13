@@ -35,7 +35,9 @@ Measured: the glide lives in the espeak CODE, not in its data. Passing NVDA's mo
 espeak-data to the 2023 engine does not help, because the engine is compiled into
 sonata-grpc.exe."""),
 	# version
-	addon_version="3.2.0-rt1",
+	# LET OP: austeks testsuite (tests/test_buildvars.py) eist dat elk versiedeel
+	# een geheel getal is -- "3.2.0-rt1" faalt daarop. Vandaar 3.2.1 i.p.v. een suffix.
+	addon_version="3.2.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
