@@ -18,25 +18,39 @@ addon_info = AddonInfo(
 	# Add-on summary/title, usually the user visible name of the add-on
 	# Translators: Summary/title for this add-on
 	# to be shown on installation and add-on information found in add-on store
-	addon_summary=_("Sonata Neural Voices"),
+	addon_summary=_("Sonata Neural Voices (RT, espeak-fix)"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
-	addon_description=_("""Neural voices for NVDA based on Sonata"""),
+	addon_description=_("""Neural voices for NVDA based on Sonata.
+
+This build differs from upstream in one way: the bundled espeak-ng is pinned to
+espeak-ng/espeak-ng@724808c (April 2026) instead of rhasspy/espeak-ng@8593723f (2023).
+
+Why this matters: espeak inserts a palatal glide between a high vowel and a following
+vowel ("me off" -> me-Y-off). The 2023 build does not. Voices trained on modern espeak
+(such as any Piper voice trained with piper1-gpl) therefore receive phoneme sequences at
+inference time that they never saw during training -- for 26% of test sentences.
+
+Measured: the glide lives in the espeak CODE, not in its data. Passing NVDA's modern
+espeak-data to the 2023 engine does not help, because the engine is compiled into
+sonata-grpc.exe."""),
 	# version
-	addon_version="3.2.0",
+	addon_version="3.2.0-rt1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
-		"First stable release of the maintenance fork. "
-		"Adds NVDA 2026.1 compatibility (Python 3.13, 64-bit) by rebuilding the bundled gRPC, miniaudio, and cffi binaries. "
-		"Fixes voice list URL handling, voice install regex for names containing digits, voice list refresh after a successful download, install-from-local-file UX and error messages, and adds a Visual C++ Redistributable pre-flight check."
+		"Fork of austek/sonata-nvda with one change: the bundled sonata-grpc.exe is rebuilt "
+		"against espeak-ng@724808c (2026) instead of rhasspy/espeak-ng@8593723f (2023), so that "
+		"phonemes at inference match those used during training of modern Piper voices. "
+		"Also fixes a bug in Sonata's build.rs that prevented linking against libucd. "
+		"Inherits austek's NVDA 2026.1 compatibility work (Python 3.13, 64-bit)."
 	),
 	# Author(s)
-	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",
+	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>, aradix85 (espeak pin)",
 	# URL for the add-on documentation support
-	addon_url="https://github.com/austek/sonata-nvda",
+	addon_url="https://github.com/aradix85/sonata-nvda-rt",
 	# URL for the add-on repository where the source code can be found
-	addon_sourceURL="https://github.com/austek/sonata-nvda",
+	addon_sourceURL="https://github.com/aradix85/sonata-nvda",
 	# Documentation file name
 	addon_docFileName="readme.html",
 	# Minimum NVDA version supported (e.g. "2019.3.0", minor version is optional)
