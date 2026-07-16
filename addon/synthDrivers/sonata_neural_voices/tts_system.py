@@ -83,9 +83,14 @@ class SonataVoice:
     def from_path(cls, path):
         path = Path(path)
         key = path.name
-        try:
-            lang, name, quality = key.split("-")
-        except ValueError:
+        parts = key.split("-")
+        if len(parts) == 3:
+            lang, name, quality = parts
+        elif len(parts) == 2:
+            # lang-name, no explicit quality (accept modern/minimal names)
+            lang, name = parts
+            quality = "medium"
+        else:
             raise ValueError(f"Invalid voice path: {path}")
         return cls(
             key=key,
@@ -188,7 +193,21 @@ class SonataVoice:
             appended_silence_ms=sentence_silence_ms,
             streaming=self.supports_streaming_output
         )
+        # Lead-in silence before the first real chunk.
+        #
+        # In streaming mode the first chunk is fed to NVDA's WavePlayer while the
+        # audio device is still spinning up, so its first few milliseconds -- the
+        # onset of the first word -- get swallowed. A soft onset like an initial
+        # /s/ from silence is hit hardest. Feeding a short slice of silence first
+        # lets the device reach steady state before real audio arrives, so the
+        # word beginning is preserved. ~40 ms is inaudible and enough.
+        first = True
         async for ret in stream:
+            if first and self.supports_streaming_output:
+                lead_ms = 40
+                n_samples = int(self.sample_rate * lead_ms / 1000)
+                yield b"\x00\x00" * n_samples  # 16-bit mono silence
+                first = False
             yield ret.wav_samples
 
 
@@ -360,8 +379,22 @@ class SonataTextToSpeechSystem:
 
     @staticmethod
     def get_voice_variants(voice_key):
+        # A voice may have a standard/fast (+RT) pair, or it may be a single
+        # variant only -- piper1-gpl streaming voices ship as one model and are
+        # named without the +RT marker. Never assume the pair exists: return
+        # sensible keys for whatever we were given, and never raise on a missing
+        # or oddly-shaped key (that used to freeze the settings dialog with
+        # "'NoneType' object has no attribute 'replace'").
+        if not voice_key:
+            return None, None
         std_key = voice_key.replace("+RT", "")
-        lang, name, quality = std_key.split("-")
+        parts = std_key.split("-")
+        if len(parts) != 3:
+            # Non-standard key layout: we can't synthesise the partner key, so
+            # the voice simply has no separate variant. Report itself as its own
+            # standard key and no fast key.
+            return std_key, None
+        lang, name, quality = parts
         rt_key = f"{lang}-{name}+RT-{quality}"
         return std_key, rt_key
     def create_speech_provider(self, text):

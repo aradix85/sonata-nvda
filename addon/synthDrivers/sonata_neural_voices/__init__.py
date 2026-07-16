@@ -157,7 +157,10 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     supportedSettings = (
         SynthDriver.VoiceSetting(),
-        SynthDriver.VariantSetting(),
+        # VariantSetting intentionally removed: these voices are streaming-only,
+        # so there is no standard/fast choice to offer. Leaving it in made the
+        # settings dialog build a variant list for a voice that has none, which
+        # crashed and froze the whole Speech dialog (rate/volume unusable).
         SpeakerSetting(),
         SynthDriver.RateSetting(),
         SynthDriver.RateBoostSetting(),
@@ -489,12 +492,25 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         self._player = self._get_or_create_player(voice.sample_rate)
 
     def _getAvailableVariants(self):
-        std_key, rt_key = SonataTextToSpeechSystem.get_voice_variants(self.__voice)
+        # Fall back to the currently active voice if no variant voice has been
+        # set yet -- opening Speech settings before a variant is chosen used to
+        # pass None here and freeze the dialog.
+        voice_key = self.__voice
+        if not voice_key:
+            with suppress(AttributeError, KeyError):
+                voice_key = self.tts.voice
+        std_key, rt_key = SonataTextToSpeechSystem.get_voice_variants(voice_key)
         rv = OrderedDict()
-        if std_key in self._voice_map:
+        if std_key and std_key in self._voice_map:
             rv["standard"] = VoiceInfo("standard", "Standard", self.language)
-        if rt_key in self._voice_map:
+        if rt_key and rt_key in self._voice_map:
             rv["fast"] = VoiceInfo("fast", "Fast", self.language)
+        # A single-variant (streaming-only) voice has no std/fast pair. Offer it
+        # as its own sole variant so the UI has something valid to show.
+        if not rv and voice_key in self._voice_map:
+            variant = self._voice_map[voice_key].variant
+            label = "Fast" if variant == "fast" else "Standard"
+            rv[variant] = VoiceInfo(variant, label, self.language)
         return rv
 
     def _get_variant_independent_voice_id(self, voice_key):
