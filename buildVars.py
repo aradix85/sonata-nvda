@@ -37,18 +37,23 @@ sonata-grpc.exe."""),
 	# version
 	# LET OP: austeks testsuite (tests/test_buildvars.py) eist dat elk versiedeel
 	# een geheel getal is -- "3.2.0-rt1" faalt daarop. Vandaar 3.2.1 i.p.v. een suffix.
-	addon_version="3.2.1",
+	addon_version="3.4.4",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
-		"Fork of austek/sonata-nvda with one change: the bundled sonata-grpc.exe is rebuilt "
-		"against espeak-ng@724808c (2026) instead of rhasspy/espeak-ng@8593723f (2023), so that "
-		"phonemes at inference match those used during training of modern Piper voices. "
-		"Also fixes a bug in Sonata's build.rs that prevented linking against libucd. "
-		"Inherits austek's NVDA 2026.1 compatibility work (Python 3.13, 64-bit)."
+		"Makes modern piper1-gpl voices work in Sonata, including streaming-only voices. "
+		"Rebuilds sonata-grpc.exe with: greedy phoneme matching so multi-codepoint tokens "
+		"(diphthongs aI aU OI eI oU) resolve to the trained id instead of failing to load or "
+		"mispronouncing English; optional config fields (phoneme_map, num_symbols) so a "
+		"piper1-gpl config loads without hand-editing; and overlap-add streaming so chunk "
+		"seams no longer pop. Add-on fixes: streaming-only voices no longer freeze the Speech "
+		"settings dialog (rate/volume/pitch stay adjustable), the meaningless Standard/Fast "
+		"control is removed for them, and a short lead-in silence stops the first word's onset "
+		"being swallowed. Also keeps the espeak-ng@724808c pin and libucd build fix, and "
+		"inherits austek's NVDA 2026.1 compatibility work."
 	),
 	# Author(s)
-	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>, aradix85 (espeak pin)",
+	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>, aradix85 (piper1-gpl support)",
 	# URL for the add-on documentation support
 	addon_url="https://github.com/aradix85/sonata-nvda-rt",
 	# URL for the add-on repository where the source code can be found
